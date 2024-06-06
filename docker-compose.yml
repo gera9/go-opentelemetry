@@ -1,0 +1,52 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13.3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - my-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: jaeger
+    ports:
+        - "16686:16686"   # Jaeger UI
+        - "4318:4318"     # OTLP gRPC receiver
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+    command: ["--query.max-clock-skew-adjustment=1s"]
+    networks:
+      - my-net
+
+  sender:
+    build: ./sender
+    container_name: sender
+    depends_on:
+      - rabbitmq
+      - jaeger
+    networks:
+      - my-net
+    volumes:
+      - ./sender:/mapping
+    ports:
+      - "3000:3000"
+
+  receiver:
+    build: ./receiver
+    container_name: receiver
+    depends_on:
+      - rabbitmq
+      - jaeger
+    networks:
+      - my-net
+    volumes:
+      - ./receiver:/receiver
+
+networks:
+  my-net:
+
